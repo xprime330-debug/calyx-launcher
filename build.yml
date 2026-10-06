@@ -1,0 +1,43 @@
+name: Build Calyx APK
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find the project
+        id: loc
+        run: |
+          if [ -f app/build.gradle.kts ]; then
+            echo "dir=." >> "$GITHUB_OUTPUT"
+          elif [ -f calyx-source.zip ]; then
+            mkdir -p project
+            unzip -oq calyx-source.zip -d project
+            echo "dir=project" >> "$GITHUB_OUTPUT"
+          else
+            echo "No project found. Upload calyx-source.zip to the repo root."
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build debug APK
+        working-directory: ${{ steps.loc.outputs.dir }}
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Calyx-debug-apk
+          path: ${{ steps.loc.outputs.dir }}/app/build/outputs/apk/debug/app-debug.apk
