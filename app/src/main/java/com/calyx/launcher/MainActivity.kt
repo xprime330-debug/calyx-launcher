@@ -568,7 +568,7 @@ class MainActivity : Activity() {
             val query = LauncherApps.ShortcutQuery().setPackage(app.component.packageName)
                 .setQueryFlags(LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST or LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC or LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED)
             val shortcut = launcherApps.getShortcuts(query, android.os.Process.myUserHandle()).orEmpty().getOrNull(index) ?: return
-            launcherApps.startShortcut(shortcut.package, shortcut.id, null, null, android.os.Process.myUserHandle())
+            launcherApps.startShortcut(shortcut.`package`, shortcut.id, null, null, android.os.Process.myUserHandle())
         } catch (_: Exception) { Toast.makeText(this, "Shortcut unavailable", Toast.LENGTH_SHORT).show() }
     }
 
