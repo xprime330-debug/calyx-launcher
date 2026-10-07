@@ -11,39 +11,113 @@
         android:orientation="vertical">
 
         <LinearLayout
+            android:id="@+id/clockPanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginStart="18dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginEnd="18dp"
+            android:layout_marginBottom="6dp"
+            android:background="@drawable/bg_clock_panel"
             android:orientation="vertical"
-            android:paddingStart="24dp"
-            android:paddingTop="16dp"
-            android:paddingEnd="24dp"
-            android:paddingBottom="4dp">
+            android:paddingStart="20dp"
+            android:paddingTop="14dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <TextView
+                    android:id="@+id/clockEyebrow"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:letterSpacing="0.18"
+                    android:text="C A L Y X   /   C H R O N O"
+                    android:textColor="#FF9EEBFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+                <View
+                    android:layout_width="6dp"
+                    android:layout_height="6dp"
+                    android:background="@drawable/bg_status_dot" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:letterSpacing="0.12"
+                    android:text="LOCAL"
+                    android:textColor="#FFAAC3D5"
+                    android:textSize="11sp" />
+            </LinearLayout>
 
             <TextClock
                 android:id="@+id/clock"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-thin"
+                android:layout_marginTop="2dp"
+                android:fontFamily="sans-serif-light"
                 android:format12Hour="h:mm"
                 android:format24Hour="HH:mm"
-                android:shadowColor="#66000000"
+                android:includeFontPadding="false"
+                android:letterSpacing="0.02"
+                android:shadowColor="#44000000"
                 android:shadowDy="2"
-                android:shadowRadius="8"
-                android:textColor="#FFFFFF"
-                android:textSize="56sp" />
+                android:shadowRadius="10"
+                android:textColor="#FFF7FBFF"
+                android:textSize="62sp" />
 
-            <TextClock
-                android:id="@+id/date"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:format12Hour="EEEE, d MMMM"
-                android:format24Hour="EEEE, d MMMM"
-                android:shadowColor="#66000000"
-                android:shadowDy="1"
-                android:shadowRadius="4"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <TextClock
+                    android:id="@+id/date"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:format12Hour="EEEE  •  d MMM yyyy"
+                    android:format24Hour="EEEE  •  d MMM yyyy"
+                    android:letterSpacing="0.04"
+                    android:textColor="#FFD4E2ED"
+                    android:textSize="13sp" />
+                <TextView
+                    android:id="@+id/clockZone"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_clock_zone"
+                    android:paddingStart="9dp"
+                    android:paddingTop="5dp"
+                    android:paddingEnd="9dp"
+                    android:paddingBottom="5dp"
+                    android:text="UTC +00:00"
+                    android:textColor="#FFDFF7FF"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
+
+        <HorizontalScrollView
+            android:id="@+id/widgetTrayScroll"
+            android:layout_width="match_parent"
+            android:layout_height="138dp"
+            android:clipToPadding="false"
+            android:fillViewport="false"
+            android:scrollbars="none"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:visibility="gone">
+            <LinearLayout
+                android:id="@+id/widgetTray"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
 
         <androidx.viewpager2.widget.ViewPager2
             android:id="@+id/pager"
@@ -77,7 +151,6 @@
         android:clickable="true"
         android:focusable="true"
         android:visibility="gone">
-
         <LinearLayout
             android:id="@+id/drawerContent"
             android:layout_width="match_parent"
@@ -85,27 +158,57 @@
             android:orientation="vertical"
             android:paddingStart="16dp"
             android:paddingEnd="16dp">
-
             <EditText
                 android:id="@+id/search"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:hint="Search apps"
+                android:layout_height="50dp"
+                android:hint="Search your library"
                 android:imeOptions="actionGo"
+                android:importantForAutofill="no"
                 android:inputType="text"
                 android:maxLines="1"
                 android:paddingStart="18dp"
                 android:paddingEnd="18dp"
                 android:textSize="16sp" />
-
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:scrollbars="none">
+                <LinearLayout
+                    android:id="@+id/drawerCategories"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+            <TextView
+                android:id="@+id/recentAppsTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="18dp"
+                android:letterSpacing="0.16"
+                android:text="RECENT"
+                android:textColor="#FF9EEBFF"
+                android:textSize="11sp"
+                android:visibility="gone" />
+            <HorizontalScrollView
+                android:id="@+id/recentAppsScroll"
+                android:layout_width="match_parent"
+                android:layout_height="94dp"
+                android:scrollbars="none"
+                android:visibility="gone">
+                <LinearLayout
+                    android:id="@+id/recentAppsRow"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/drawerList"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="6dp"
                 android:layout_weight="1"
                 android:clipToPadding="false" />
         </LinearLayout>
     </FrameLayout>
-
 </com.calyx.launcher.GestureLayout>

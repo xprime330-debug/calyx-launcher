@@ -80,6 +80,47 @@ class ShapedIcon(private val src: Drawable, private val shape: Int) : Drawable()
     @Suppress("DEPRECATION") override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
 }
 
+/** A compact, custom folder preview; style 0 grid, style 1 layered card, style 2 stack. */
+class FolderPreviewDrawable(private val icons: List<Drawable>, private val style: Int) : Drawable() {
+    private val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xAAE6F2FF.toInt() }
+    private val tile = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x55243142 }
+    override fun draw(canvas: Canvas) {
+        val b = bounds
+        val save = canvas.save()
+        canvas.clipPath(Path().apply { addRoundRect(RectF(b), b.width() * .27f, b.width() * .27f, Path.Direction.CW) })
+        canvas.drawRoundRect(RectF(b), b.width() * .27f, b.width() * .27f, bg)
+        val count = minOf(icons.size, if (style == 2) 3 else 4)
+        if (style == 2) {
+            for (i in count - 1 downTo 0) {
+                val inset = b.width() * (.12f + i * .08f)
+                val rect = Rect(b.left + inset.toInt(), b.top + inset.toInt(), b.right - inset.toInt(), b.bottom - inset.toInt())
+                canvas.drawRoundRect(RectF(rect), b.width() * .12f, b.width() * .12f, tile)
+                drawIcon(canvas, icons[i], rect)
+            }
+        } else {
+            val inset = b.width() * if (style == 1) .14f else .12f
+            val gap = b.width() * .06f
+            val cell = (b.width() - 2 * inset - gap) / 2f
+            for (i in 0 until count) {
+                val row = i / 2; val col = i % 2
+                val left = (b.left + inset + col * (cell + gap)).toInt()
+                val top = (b.top + inset + row * (cell + gap)).toInt()
+                val rect = Rect(left, top, (left + cell).toInt(), (top + cell).toInt())
+                if (style == 1) canvas.drawRoundRect(RectF(rect), cell * .24f, cell * .24f, tile)
+                drawIcon(canvas, icons[i], rect)
+            }
+        }
+        canvas.restoreToCount(save)
+    }
+    private fun drawIcon(canvas: Canvas, icon: Drawable, rect: Rect) {
+        val old = Rect(icon.bounds); icon.bounds = rect; icon.draw(canvas); icon.bounds = old
+    }
+    override fun onBoundsChange(bounds: Rect) {}
+    override fun setAlpha(alpha: Int) { bg.alpha = alpha }
+    override fun setColorFilter(colorFilter: ColorFilter?) { bg.colorFilter = colorFilter }
+    @Suppress("DEPRECATION") override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+}
+
 /** Backwards-compatible icon cell; callers can opt into a shape and size. */
 fun makeAppCell(
     ctx: Context,
@@ -96,7 +137,7 @@ fun makeAppCell(
     val icon = ImageView(ctx)
     icon.scaleType = ImageView.ScaleType.FIT_XY
     icon.contentDescription = app.label
-    icon.setImageDrawable(ShapedIcon(app.icon, shape))
+    icon.setImageDrawable(if (app.isFolder) app.icon else ShapedIcon(app.icon, shape))
     cell.addView(icon, LinearLayout.LayoutParams(ctx.dp(iconDp), ctx.dp(iconDp)))
     if (labels) {
         val tv = TextView(ctx)
