@@ -18,6 +18,7 @@ class GestureLayout @JvmOverloads constructor(
 
     var swipeUpListener: (() -> Unit)? = null
     var swipeDownListener: (() -> Unit)? = null
+    var edgeSwipeListener: (() -> Unit)? = null
     var doubleTapListener: (() -> Unit)? = null
     var gestureStartListener: (() -> Unit)? = null
 
@@ -40,6 +41,13 @@ class GestureLayout @JvmOverloads constructor(
                 if (e1 == null) return false
                 val dy = e2.y - e1.y
                 val dx = e2.x - e1.x
+                val farEnoughHorizontal = abs(dx) > context.dp(88)
+                val mostlyHorizontal = abs(dx) > abs(dy) * 1.5f
+                val fromEdge = e1.x < context.dp(24) || e1.x > width - context.dp(24)
+                if (farEnoughHorizontal && mostlyHorizontal && fromEdge && abs(velocityX) > 600f) {
+                    edgeSwipeListener?.invoke()
+                    return true
+                }
                 val farEnough = abs(dy) > context.dp(80)
                 val mostlyVertical = abs(dy) > abs(dx) * 1.5f
                 if (farEnough && mostlyVertical && abs(velocityY) > 600f) {

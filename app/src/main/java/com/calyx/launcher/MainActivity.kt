@@ -58,6 +58,9 @@ class MainActivity : Activity() {
     private lateinit var date: TextClock
     private lateinit var clockEyebrow: TextView
     private lateinit var clockZone: TextView
+    private lateinit var notificationButton: TextView
+    private lateinit var controlsButton: TextView
+    private lateinit var peekButton: TextView
     private lateinit var widgetTrayScroll: View
     private lateinit var widgetTray: LinearLayout
     private lateinit var drawerCategories: LinearLayout
@@ -71,6 +74,7 @@ class MainActivity : Activity() {
     private lateinit var drawerContent: LinearLayout
     private lateinit var search: EditText
     private lateinit var drawerList: RecyclerView
+    private lateinit var centersUi: CalyxCenters
 
     private var allApps: List<AppInfo> = emptyList()
     private var drawerAdapter: DrawerAdapter? = null
@@ -90,7 +94,11 @@ class MainActivity : Activity() {
         override fun onReceive(context: Context, intent: Intent) {
             updateClockZone()
             if (intent.action == Intent.ACTION_WALLPAPER_CHANGED) applyTheme()
+            if (intent.action == Intent.ACTION_TIME_CHANGED || intent.action == Intent.ACTION_TIMEZONE_CHANGED) CenterSchedules.refreshAfterClockChange(context)
         }
+    }
+    private val notificationReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) { refreshBadgeViews() }
     }
 
     private companion object {
@@ -114,6 +122,9 @@ class MainActivity : Activity() {
         date = findViewById(R.id.date)
         clockEyebrow = findViewById(R.id.clockEyebrow)
         clockZone = findViewById(R.id.clockZone)
+        notificationButton = findViewById(R.id.notificationButton)
+        controlsButton = findViewById(R.id.controlsButton)
+        peekButton = findViewById(R.id.peekButton)
         widgetTrayScroll = findViewById(R.id.widgetTrayScroll)
         widgetTray = findViewById(R.id.widgetTray)
         drawerCategories = findViewById(R.id.drawerCategories)
@@ -127,6 +138,10 @@ class MainActivity : Activity() {
         drawerContent = findViewById(R.id.drawerContent)
         search = findViewById(R.id.search)
         drawerList = findViewById(R.id.drawerList)
+        centersUi = CalyxCenters(this, prefs, { palette }, { allApps }, { key -> resolveTile(key) }, { app -> launch(app) }, { refreshBadgeViews() })
+        notificationButton.setOnClickListener { centersUi.showNotificationCenter() }
+        controlsButton.setOnClickListener { centersUi.showControlCenter() }
+        peekButton.setOnClickListener { if (prefs.peekEnabled) centersUi.showPeekPanel() }
 
         drawerList.layoutManager = GridLayoutManager(this, prefs.drawerColumns)
 
@@ -156,6 +171,7 @@ class MainActivity : Activity() {
             if (!drawerOpen) openDrawer(false)
         }
         root.swipeDownListener = { handleSwipeDown() }
+        root.edgeSwipeListener = { if (!drawerOpen && prefs.peekEnabled) centersUi.showPeekPanel() }
         root.doubleTapListener = {
             if (!drawerOpen) openDrawer(true)
         }
@@ -188,6 +204,7 @@ class MainActivity : Activity() {
             addAction(Intent.ACTION_TIME_CHANGED); addAction(Intent.ACTION_TIMEZONE_CHANGED); addAction(Intent.ACTION_WALLPAPER_CHANGED)
         }
         ContextCompat.registerReceiver(this, displayReceiver, displayFilter, ContextCompat.RECEIVER_EXPORTED)
+        ContextCompat.registerReceiver(this, notificationReceiver, IntentFilter(CalyxNotificationService.ACTION_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED)
 
         updateClockZone()
         dock.setOnDragListener { _, event ->
@@ -206,6 +223,7 @@ class MainActivity : Activity() {
         try { appWidgetHost.startListening() } catch (_: Exception) { }
         updateClockZone()
         applyTheme()
+        if (::centersUi.isInitialized) centersUi.onResume()
     }
 
     override fun onPause() {
@@ -216,6 +234,7 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         try { unregisterReceiver(packageReceiver) } catch (_: Exception) { }
         try { unregisterReceiver(displayReceiver) } catch (_: Exception) { }
+        try { unregisterReceiver(notificationReceiver) } catch (_: Exception) { }
         super.onDestroy()
     }
 
@@ -253,6 +272,12 @@ class MainActivity : Activity() {
         date.setTextColor(palette.subtext)
         clockEyebrow.setTextColor(palette.accent)
         clockZone.setTextColor(palette.text)
+        if (::notificationButton.isInitialized) notificationButton.setTextColor(palette.text)
+        if (::controlsButton.isInitialized) controlsButton.setTextColor(palette.text)
+        if (::peekButton.isInitialized) {
+            peekButton.setTextColor(palette.text)
+            peekButton.visibility = if (prefs.peekEnabled) View.VISIBLE else View.GONE
+        }
         drawer.background = palette.drawerBackground(resources.displayMetrics.density)
         drawerContent.background = when (prefs.drawerStyle) {
             1, 3 -> palette.surface(resources.displayMetrics.density)
@@ -406,7 +431,8 @@ class MainActivity : Activity() {
             { app, view -> showAppMenu(app, view, fromDrawer = false, inDock = false) },
             { showSettings() },
             prefs.iconSize, prefs.iconShape,
-            { key, target -> moveHomeApp(key, target) }
+            { key, target -> moveHomeApp(key, target) },
+            { pkg -> badgeCount(pkg) }
         )
         pager.setPageTransformer { page, position ->
             when (prefs.transition) {
@@ -435,7 +461,7 @@ class MainActivity : Activity() {
         for (key in valid) {
             val app = resolveTile(key) ?: continue
             val dockIconSize = minOf(prefs.iconSize, if (prefs.dockCapacity >= 7) 42 else if (prefs.dockCapacity >= 6) 46 else if (prefs.dockCapacity >= 5) 52 else prefs.iconSize)
-            val cell = makeAppCell(this, app, palette.text, dockIconSize, labels = false, shadow = false, shape = prefs.iconShape)
+            val cell = makeAppCell(this, app, palette.text, dockIconSize, labels = false, shadow = false, shape = prefs.iconShape, badgeCount = badgeCount(app.component.packageName))
             cell.setOnClickListener { launch(app) }
             cell.setOnLongClickListener {
                 showAppMenu(app, cell, fromDrawer = false, inDock = true)
@@ -461,7 +487,8 @@ class MainActivity : Activity() {
             palette.text,
             { app -> launch(app) },
             { app, view -> showAppMenu(app, view, fromDrawer = true, inDock = false) },
-            prefs.iconSize, prefs.iconShape, { key -> prefs.launchCount(key) }, prefs.frequentFirst
+            prefs.iconSize, prefs.iconShape, { key -> prefs.launchCount(key) }, prefs.frequentFirst,
+            { pkg -> badgeCount(pkg) }
         )
         adapter.setCategory(prefs.drawerCategory)
         drawerAdapter = adapter
@@ -477,7 +504,7 @@ class MainActivity : Activity() {
         recentAppsRow.removeAllViews()
         val recent = prefs.recentApps.mapNotNull { key -> allApps.firstOrNull { it.key == key && key !in prefs.hiddenApps } }.take(8)
         recent.forEach { app ->
-            val cell = makeAppCell(this, app, palette.text, 42, labels = true, shadow = false, shape = prefs.iconShape).apply {
+            val cell = makeAppCell(this, app, palette.text, 42, labels = true, shadow = false, shape = prefs.iconShape, badgeCount = badgeCount(app.component.packageName)).apply {
                 contentDescription = "Recently used ${app.label}"
                 setOnClickListener { launch(app) }
             }
@@ -770,6 +797,27 @@ class MainActivity : Activity() {
         row("Export layout and settings", "Create a local .calyxbackup file", { exportBackup() })
         row("Restore layout and settings", "Import a .calyxbackup file", { importBackup() })
         row("Weather data source", "Open-Meteo · city name only; no device location", { safeStart(Intent(Intent.ACTION_VIEW, Uri.parse("https://open-meteo.com/en/terms"))) })
+        section("Centers and privacy")
+        row("Permission Center", "Review optional Android access", { centersUi.showPermissionCenter() })
+        row("Notification badges", if (prefs.notificationBadgesEnabled) "Show active notification counts on app icons" else "Hidden") {
+            prefs.notificationBadgesEnabled = !prefs.notificationBadgesEnabled
+            refreshBadgeViews()
+        }
+        row("Privacy Shield", if (prefs.privacyShield) "Notification message text is hidden in Calyx" else "Notification previews are visible in Calyx") { prefs.privacyShield = !prefs.privacyShield }
+        row("Notification history", if (prefs.notificationHistoryEnabled) "On · stored locally, up to 50 entries" else "Off · notification content is not retained") {
+            prefs.notificationHistoryEnabled = !prefs.notificationHistoryEnabled
+            if (!prefs.notificationHistoryEnabled) NotificationHistory.clear(this)
+        }
+        row("Muted in Calyx", "${prefs.mutedNotificationPackages.size} apps · Android notifications are unchanged", { centersUi.manageMutedApps() })
+        row("Daily digest", if (prefs.digestEnabled) "On · ${String.format(java.util.Locale.getDefault(), "%02d:%02d", prefs.digestMinute / 60, prefs.digestMinute % 60)}" else "Off · count-only reminder, optional", {
+            if (prefs.digestEnabled) centersUi.setDigestEnabled(false) else centersUi.configureDigestTimeAndEnable()
+        })
+        row("Do Not Disturb schedule", if (prefs.dndScheduleEnabled) "On · ${String.format(java.util.Locale.getDefault(), "%02d:%02d–%02d:%02d", prefs.dndStartMinute / 60, prefs.dndStartMinute % 60, prefs.dndEndMinute / 60, prefs.dndEndMinute % 60)}" else "Off · Android policy access required", { centersUi.toggleDndSchedule() })
+        row("Peek favorites", "${prefs.peekFavorites.size} selected · local to this device", { centersUi.managePeekFavorites() })
+        row("Control Center tiles", "Custom order · ${listOf("Comfortable", "Compact", "Dense")[prefs.controlTileSize]}", { centersUi.manageControlTiles() })
+        row("Control tile size", listOf("Comfortable", "Compact", "Dense")[prefs.controlTileSize], { chooseFrom("Control tile size", arrayOf("Comfortable", "Compact", "Dense")) { prefs.controlTileSize = it } })
+        row("Control haptics", if (prefs.controlHaptics) "On" else "Off", { prefs.controlHaptics = !prefs.controlHaptics })
+        row("Peek Panel", if (prefs.peekEnabled) "Edge swipe and clock-card shortcut enabled" else "Disabled", { prefs.peekEnabled = !prefs.peekEnabled; peekButton.visibility = if (prefs.peekEnabled) View.VISIBLE else View.GONE })
         section("System")
         row("Change wallpaper", "Open Android wallpaper picker", { safeStart(Intent.createChooser(Intent(Intent.ACTION_SET_WALLPAPER), "Select wallpaper")) })
         row("Default launcher", "Choose Calyx as your home app", { safeStart(Intent(Settings.ACTION_HOME_SETTINGS)) })
@@ -1010,6 +1058,7 @@ class MainActivity : Activity() {
             if (requestCode == 4102) {
                 val raw = contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""
                 if (!raw.startsWith("CALYX_BACKUP_V1\n") || !prefs.import(raw.substringAfter('\n'))) throw IllegalArgumentException()
+                CenterSchedules.refresh(this)
                 refreshUi(); Toast.makeText(this, "Backup restored", Toast.LENGTH_SHORT).show()
             }
         } catch (_: Exception) { Toast.makeText(this, "Could not read or write backup", Toast.LENGTH_LONG).show() }
@@ -1019,19 +1068,24 @@ class MainActivity : Activity() {
         if (drawerOpen) {
             if (listAtTopOnDown) closeDrawer(true)
         } else {
-            expandNotifications()
+            centersUi.showNotificationCenter()
         }
     }
 
-    /** Swipe down on the home screen pulls down the notification panel. */
-    private fun expandNotifications() {
-        try {
-            val service = getSystemService("statusbar")
-            val cls = Class.forName("android.app.StatusBarManager")
-            cls.getMethod("expandNotificationsPanel").invoke(service)
-        } catch (e: Exception) {
-            // Not allowed on this phone; ignore.
-        }
+    private fun badgeCount(packageName: String): Int =
+        if (prefs.notificationBadgesEnabled && packageName !in prefs.mutedNotificationPackages) CalyxNotificationService.countFor(this, packageName) else 0
+
+    private fun refreshBadgeViews() {
+        if (!::prefs.isInitialized || !::pager.isInitialized) return
+        pager.adapter?.notifyDataSetChanged()
+        renderDock(); drawerAdapter?.refreshBadges(); renderRecentApps()
+        val count = if (prefs.notificationBadgesEnabled && CalyxNotificationService.hasAccess(this)) CalyxNotificationService.snapshot().count { it.packageName !in prefs.mutedNotificationPackages } else 0
+        notificationButton.text = if (count > 0) "ALERTS $count" else "ALERTS"
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (::centersUi.isInitialized) centersUi.onRequestPermissionsResult(requestCode, grantResults)
     }
 
     private fun safeStart(intent: Intent) {

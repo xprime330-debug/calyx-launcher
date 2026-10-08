@@ -19,7 +19,8 @@ class HomePagerAdapter(
     private val onBackgroundLongClick: () -> Unit,
     private val iconSize: Int = 58,
     private val iconShape: Int = IconShape.SQUIRCLE,
-    private val onDrop: (String, Int) -> Unit = { _, _ -> }
+    private val onDrop: (String, Int) -> Unit = { _, _ -> },
+    private val badgeFor: (String) -> Int = { 0 }
 ) : RecyclerView.Adapter<HomePagerAdapter.VH>() {
 
     class VH(val frame: FrameLayout) : RecyclerView.ViewHolder(frame)
@@ -48,7 +49,7 @@ class HomePagerAdapter(
             }
             if (i < apps.size) {
                 val app = apps[i]
-                val cell = makeAppCell(ctx, app, Color.WHITE, iconSize, labels = true, shadow = true, shape = iconShape)
+                val cell = makeAppCell(ctx, app, Color.WHITE, iconSize, labels = true, shadow = true, shape = iconShape, badgeCount = badgeFor(app.component.packageName))
                 cell.setOnClickListener { onClick(app) }
                 cell.setOnLongClickListener { view ->
                     val clip = ClipData.newPlainText("calyx-app", app.key)

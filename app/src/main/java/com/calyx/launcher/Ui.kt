@@ -13,6 +13,7 @@ import android.graphics.drawable.Drawable
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -129,7 +130,8 @@ fun makeAppCell(
     iconDp: Int,
     labels: Boolean,
     shadow: Boolean,
-    shape: Int = IconShape.SQUIRCLE
+    shape: Int = IconShape.SQUIRCLE,
+    badgeCount: Int = 0
 ): LinearLayout {
     val cell = LinearLayout(ctx)
     cell.orientation = LinearLayout.VERTICAL
@@ -138,7 +140,29 @@ fun makeAppCell(
     icon.scaleType = ImageView.ScaleType.FIT_XY
     icon.contentDescription = app.label
     icon.setImageDrawable(if (app.isFolder) app.icon else ShapedIcon(app.icon, shape))
-    cell.addView(icon, LinearLayout.LayoutParams(ctx.dp(iconDp), ctx.dp(iconDp)))
+    val iconFrame = FrameLayout(ctx)
+    val iconSize = ctx.dp(iconDp)
+    iconFrame.addView(icon, FrameLayout.LayoutParams(iconSize, iconSize))
+    if (badgeCount > 0 && !app.isFolder) {
+        val badge = TextView(ctx).apply {
+            text = if (badgeCount > 99) "99+" else badgeCount.toString()
+            setTextColor(0xFFFFFFFF.toInt())
+            textSize = if (badgeCount > 9) 9f else 10f
+            gravity = Gravity.CENTER
+            minWidth = ctx.dp(17)
+            minHeight = ctx.dp(17)
+            setPadding(ctx.dp(4), 0, ctx.dp(4), 0)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setShape(android.graphics.drawable.GradientDrawable.RECTANGLE)
+                cornerRadius = ctx.dp(10).toFloat()
+                setColor(0xFFFF496F.toInt())
+                setStroke(ctx.dp(1), 0xCCFFFFFF.toInt())
+            }
+            contentDescription = "$badgeCount notifications"
+        }
+        iconFrame.addView(badge, FrameLayout.LayoutParams(-2, ctx.dp(18), Gravity.TOP or Gravity.END))
+    }
+    cell.addView(iconFrame, LinearLayout.LayoutParams(iconSize, iconSize))
     if (labels) {
         val tv = TextView(ctx)
         tv.text = app.label

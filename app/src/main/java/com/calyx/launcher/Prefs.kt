@@ -8,6 +8,7 @@ import android.util.Base64
 data class CalyxFolder(val id: String, val name: String, val appKeys: List<String>)
 
 class Prefs(context: Context) {
+    private val appContext = context.applicationContext
     private val sp: SharedPreferences = context.getSharedPreferences("calyx", Context.MODE_PRIVATE)
     var theme: Int
         get() = sp.getInt("theme", Themes.DARK)
@@ -75,6 +76,48 @@ class Prefs(context: Context) {
     var builtinWidgets: List<String>
         get() = readList("builtinWidgets")
         set(value) { writeList("builtinWidgets", value.distinct()) }
+    var notificationBadgesEnabled: Boolean
+        get() = sp.getBoolean("notificationBadgesEnabled", true)
+        set(value) { sp.edit().putBoolean("notificationBadgesEnabled", value).apply() }
+    var notificationHistoryEnabled: Boolean
+        get() = sp.getBoolean("notificationHistoryEnabled", false)
+        set(value) { sp.edit().putBoolean("notificationHistoryEnabled", value).apply() }
+    var privacyShield: Boolean
+        get() = sp.getBoolean("privacyShield", false)
+        set(value) { sp.edit().putBoolean("privacyShield", value).apply() }
+    var mutedNotificationPackages: List<String>
+        get() = readList("mutedNotificationPackages")
+        set(value) { writeList("mutedNotificationPackages", value.distinct()) }
+    var digestEnabled: Boolean
+        get() = sp.getBoolean("digestEnabled", false)
+        set(value) { sp.edit().putBoolean("digestEnabled", value).apply() }
+    var digestMinute: Int
+        get() = sp.getInt("digestMinute", 18 * 60).coerceIn(0, 1439)
+        set(value) { sp.edit().putInt("digestMinute", value.coerceIn(0, 1439)).apply() }
+    var dndScheduleEnabled: Boolean
+        get() = sp.getBoolean("dndScheduleEnabled", false)
+        set(value) { sp.edit().putBoolean("dndScheduleEnabled", value).apply() }
+    var dndStartMinute: Int
+        get() = sp.getInt("dndStartMinute", 22 * 60).coerceIn(0, 1439)
+        set(value) { sp.edit().putInt("dndStartMinute", value.coerceIn(0, 1439)).apply() }
+    var dndEndMinute: Int
+        get() = sp.getInt("dndEndMinute", 7 * 60).coerceIn(0, 1439)
+        set(value) { sp.edit().putInt("dndEndMinute", value.coerceIn(0, 1439)).apply() }
+    var peekFavorites: List<String>
+        get() = readList("peekFavorites")
+        set(value) { writeList("peekFavorites", value.distinct().take(8)) }
+    var peekEnabled: Boolean
+        get() = sp.getBoolean("peekEnabled", true)
+        set(value) { sp.edit().putBoolean("peekEnabled", value).apply() }
+    var controlHaptics: Boolean
+        get() = sp.getBoolean("controlHaptics", true)
+        set(value) { sp.edit().putBoolean("controlHaptics", value).apply() }
+    var controlTileSize: Int
+        get() = sp.getInt("controlTileSize", 0).coerceIn(0, 2)
+        set(value) { sp.edit().putInt("controlTileSize", value.coerceIn(0, 2)).apply() }
+    var controlTileOrder: List<String>
+        get() = if (sp.contains("controlTileOrder")) readList("controlTileOrder") else listOf("Flashlight", "Do Not Disturb", "Rotation lock", "Wi-Fi", "Bluetooth", "Timer", "Alarm", "Camera", "Calculator")
+        set(value) { writeList("controlTileOrder", value.distinct()) }
     val recentApps: List<String> get() = readList("recentApps")
     var folders: List<CalyxFolder>
         get() = readList("folders").mapNotNull { row ->
@@ -100,7 +143,7 @@ class Prefs(context: Context) {
         val pair = it.split('\t'); if (pair.size == 2 && pair[0] == key) pair[1].toIntOrNull() else null
     }?.firstOrNull() ?: 0
 
-    fun export(): String = sp.all.entries.filterNot { it.key == "widgetIds" || it.key == "launchCounts" || it.key == "recentApps" }.sortedBy { it.key }.joinToString("\n") { (key, value) ->
+    fun export(): String = sp.all.entries.filterNot { it.key in setOf("widgetIds", "launchCounts", "recentApps", "dndPriorFilter", "dndScheduleApplied") }.sortedBy { it.key }.joinToString("\n") { (key, value) ->
         val encoded = when (value) {
             is String -> "s:" + value.replace("\\", "\\\\").replace("\n", "\\n")
             is Int -> "i:$value"
@@ -123,7 +166,9 @@ class Prefs(context: Context) {
                     else -> error("Unsupported setting")
                 }
             }
-            editor.apply(); return true
+            if (sp.getBoolean("dndScheduleApplied", false)) CenterSchedules.applyDnd(appContext, false)
+            editor.remove("dndPriorFilter").remove("dndScheduleApplied").apply()
+            return true
         } catch (_: Exception) { return false }
     }
 

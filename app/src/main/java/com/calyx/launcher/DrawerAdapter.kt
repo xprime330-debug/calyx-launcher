@@ -17,7 +17,8 @@ class DrawerAdapter(
     private val iconSize: Int = 56,
     private val iconShape: Int = IconShape.SQUIRCLE,
     private val countFor: (String) -> Int = { 0 },
-    private var frequentFirst: Boolean = false
+    private var frequentFirst: Boolean = false,
+    private val badgeFor: (String) -> Int = { 0 }
 ) : RecyclerView.Adapter<DrawerAdapter.VH>() {
     class VH(val box: FrameLayout) : RecyclerView.ViewHolder(box)
     private var shown: List<AppInfo> = all
@@ -36,6 +37,7 @@ class DrawerAdapter(
     @SuppressLint("NotifyDataSetChanged") fun filter(value: String) { query = value.trim(); refresh() }
     @SuppressLint("NotifyDataSetChanged") fun setCategory(value: String) { category = value; refresh() }
     @SuppressLint("NotifyDataSetChanged") fun setFrequentFirst(value: Boolean) { frequentFirst = value; refresh() }
+    @SuppressLint("NotifyDataSetChanged") fun refreshBadges() { notifyDataSetChanged() }
     fun firstShown(): AppInfo? = shown.firstOrNull()
     override fun getItemCount(): Int = if (shown.isEmpty()) 1 else shown.size
     override fun getItemViewType(position: Int): Int = if (shown.isEmpty()) 1 else 0
@@ -62,7 +64,7 @@ class DrawerAdapter(
         }
         val app = shown[position]
         val ctx = holder.box.context
-        val cell = makeAppCell(ctx, app, textColor, iconSize, labels = true, shadow = false, shape = iconShape)
+        val cell = makeAppCell(ctx, app, textColor, iconSize, labels = true, shadow = false, shape = iconShape, badgeCount = badgeFor(app.component.packageName))
         cell.setOnClickListener { onClick(app) }
         cell.setOnLongClickListener { onLongClick(app, cell); true }
         holder.box.addView(cell, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))

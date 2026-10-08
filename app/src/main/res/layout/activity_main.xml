@@ -52,6 +52,57 @@
                     android:text="LOCAL"
                     android:textColor="#FFAAC3D5"
                     android:textSize="11sp" />
+                <TextView
+                    android:id="@+id/notificationButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:background="@drawable/bg_clock_zone"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingStart="9dp"
+                    android:paddingTop="5dp"
+                    android:paddingEnd="9dp"
+                    android:paddingBottom="5dp"
+                    android:text="ALERTS"
+                    android:textColor="#FFDFF7FF"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:contentDescription="Open Calyx notifications" />
+                <TextView
+                    android:id="@+id/controlsButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:background="@drawable/bg_clock_zone"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingStart="9dp"
+                    android:paddingTop="5dp"
+                    android:paddingEnd="9dp"
+                    android:paddingBottom="5dp"
+                    android:text="CTRL"
+                    android:textColor="#FFDFF7FF"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:contentDescription="Open Calyx Control Center" />
+                <TextView
+                    android:id="@+id/peekButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:background="@drawable/bg_clock_zone"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingStart="9dp"
+                    android:paddingTop="5dp"
+                    android:paddingEnd="9dp"
+                    android:paddingBottom="5dp"
+                    android:text="PEEK"
+                    android:textColor="#FFDFF7FF"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:contentDescription="Open Calyx Peek Panel" />
             </LinearLayout>
 
             <TextClock
